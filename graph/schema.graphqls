@@ -1,0 +1,52 @@
+# GraphQL schema example
+#
+# https://gqlgen.com/getting-started/
+
+type User {
+  id: ID!
+  displayName: String!
+  avatarUrl: String
+  status: String!
+}
+
+type Room {
+  id: ID!
+  type: String!
+  name: String
+  lastMessage: Message
+  unreadCount: Int!
+  members: [User!]!
+}
+
+type Message {
+  id: ID!
+  content: String!
+  senderId: ID!
+  createdAt: String!
+  reactions: [Reaction!]!
+}
+
+type Reaction {
+  emoji: String!
+  userId: ID!
+}
+
+type Query {
+  myRooms: [Room!]!
+  messages(roomId: ID!, limit: Int, before: ID): [Message!]!
+}
+
+type Mutation {
+  sendMessage(roomId: ID!, content: String!): Message!
+  markAsRead(roomId: ID!): Boolean!
+}
+
+type Subscription {
+  messageAdded(roomId: ID!): Message!
+  typingIndicator(roomId: ID!): TypingEvent!
+}
+
+type TypingEvent {
+  userId: ID!
+  isTyping: Boolean!
+}

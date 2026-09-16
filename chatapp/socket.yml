@@ -1,0 +1,14 @@
+info:
+  name: socket
+  type: websocket
+
+websocket:
+  url: ws://localhost:8080
+  message:
+    type: json
+    data: "{}"
+  auth: inherit
+
+settings:
+  timeout: 0
+  keepAliveInterval: 0
