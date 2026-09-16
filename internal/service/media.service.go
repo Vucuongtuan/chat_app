@@ -26,7 +26,7 @@ func NewMediaService(db *gorm.DB, s storage.Storage) *MediaService {
 	return &MediaService{db: db, storage: s}
 }
 
-func (s *MediaService) Upload(file *multipart.FileHeader, ownerType string, ownerId uint, sortOrder int) (*model.Media, error) {
+func (s *MediaService) Upload(file *multipart.FileHeader, ownerType string, ownerId uuid.UUID, sortOrder int) (*model.Media, error) {
 	ext := filepath.Ext(file.Filename)
 	if !allowedExt[ext] {
 		return nil, fmt.Errorf("định dạng file không được hỗ trợ: %s", ext)
@@ -58,7 +58,7 @@ func (s *MediaService) Upload(file *multipart.FileHeader, ownerType string, owne
 
 	return media, nil
 }
-func (s *MediaService) GetByOwner(ownerType string, ownerId uint) ([]model.Media, error) {
+func (s *MediaService) GetByOwner(ownerType string, ownerId uuid.UUID) ([]model.Media, error) {
 	var media []model.Media
 	err := s.db.Where("owner_type = ? AND owner_id = ?", ownerType, ownerId).
 		Order("sort_order asc").
@@ -66,9 +66,9 @@ func (s *MediaService) GetByOwner(ownerType string, ownerId uint) ([]model.Media
 	return media, err
 }
 
-func (s *MediaService) Delete(id uint) error {
+func (s *MediaService) Delete(id uuid.UUID) error {
 	var media model.Media
-	if err := s.db.First(&media, id).Error; err != nil {
+	if err := s.db.First(&media, "id = ?", id).Error; err != nil {
 		return err
 	}
 
@@ -77,5 +77,5 @@ func (s *MediaService) Delete(id uint) error {
 		return err
 	}
 
-	return s.db.Delete(&model.Media{}, id).Error
+	return s.db.Delete(&model.Media{}, "id = ?", id).Error
 }

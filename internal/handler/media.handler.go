@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"chatapp/internal/service"
 )
@@ -37,7 +38,7 @@ func (h *MediaHandler) Upload(c *gin.Context) {
 	}
 
 	ownerIdStr := c.PostForm("owner_id")
-	ownerId, err := strconv.ParseUint(ownerIdStr, 10, 64)
+	ownerId, err := uuid.Parse(ownerIdStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "owner_id không hợp lệ"})
 		return
@@ -45,7 +46,7 @@ func (h *MediaHandler) Upload(c *gin.Context) {
 
 	sortOrder, _ := strconv.Atoi(c.DefaultPostForm("sort_order", "0"))
 
-	media, err := h.service.Upload(file, ownerType, uint(ownerId), sortOrder)
+	media, err := h.service.Upload(file, ownerType, ownerId, sortOrder)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -58,13 +59,13 @@ func (h *MediaHandler) GetByOwner(c *gin.Context) {
 	ownerType := c.Query("owner_type")
 	ownerIdStr := c.Query("owner_id")
 
-	ownerId, err := strconv.ParseUint(ownerIdStr, 10, 64)
+	ownerId, err := uuid.Parse(ownerIdStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "owner_id không hợp lệ"})
 		return
 	}
 
-	media, err := h.service.GetByOwner(ownerType, uint(ownerId))
+	media, err := h.service.GetByOwner(ownerType, ownerId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "lỗi server"})
 		return
@@ -74,13 +75,14 @@ func (h *MediaHandler) GetByOwner(c *gin.Context) {
 }
 
 func (h *MediaHandler) Delete(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "id không hợp lệ"})
 		return
 	}
 
-	if err := h.service.Delete(uint(id)); err != nil {
+	if err := h.service.Delete(id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "xóa thất bại"})
 		return
 	}

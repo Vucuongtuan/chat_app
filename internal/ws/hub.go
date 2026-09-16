@@ -1,9 +1,13 @@
 package ws
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/google/uuid"
+)
 
 type Hub struct {
-	rooms      map[uint]map[*Client]bool // roomId -> set of clients
+	rooms      map[uuid.UUID]map[*Client]bool // roomId -> set of clients
 	register   chan *Client
 	unregister chan *Client
 	broadcast  chan *BroadcastMessage
@@ -11,13 +15,19 @@ type Hub struct {
 }
 
 type BroadcastMessage struct {
-	RoomId  uint
+	RoomId  uuid.UUID
 	Payload []byte
+}
+
+// Minimal Client representation used by Hub.
+type Client struct {
+	RoomId uuid.UUID
+	Send   chan []byte
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		rooms:      make(map[uint]map[*Client]bool),
+		rooms:      make(map[uuid.UUID]map[*Client]bool),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		broadcast:  make(chan *BroadcastMessage),
@@ -58,6 +68,6 @@ func (h *Hub) Run() {
 	}
 }
 
-func (h *Hub) BroadcastToRoom(roomId uint, payload []byte) {
+func (h *Hub) BroadcastToRoom(roomId uuid.UUID, payload []byte) {
 	h.broadcast <- &BroadcastMessage{RoomId: roomId, Payload: payload}
 }
