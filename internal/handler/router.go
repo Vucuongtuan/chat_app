@@ -1,20 +1,32 @@
 package handler
 
-import "github.com/gin-gonic/gin"
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+
+	"chatapp/pkg/i18n"
+	"chatapp/pkg/response"
+)
 
 type Handlers struct {
 	Media *MediaHandler
+	User  *UserHandler
 }
 
-func Setup(router *gin.Engine, h *Handlers) {
+func Setup(router *gin.Engine, h *Handlers, authMiddleware ...gin.HandlerFunc) {
 	api := router.Group("/api/v1")
 	{
 		api.GET("/test", func(c *gin.Context) {
-			c.JSON(200, gin.H{
-				"message": "API is working",
-			})
+			response.Success(c, http.StatusOK, gin.H{"status": "ok"}, i18n.MsgSuccess)
 		})
 
-		h.Media.RegisterRoutes(api)
+		if h.Media != nil {
+			h.Media.RegisterRoutes(api)
+		}
+
+		if h.User != nil {
+			h.User.RegisterRoutes(api, authMiddleware...)
+		}
 	}
 }

@@ -8,6 +8,8 @@ import (
 	"github.com/google/uuid"
 
 	"chatapp/internal/service"
+	"chatapp/pkg/i18n"
+	"chatapp/pkg/response"
 )
 
 func (h *MediaHandler) RegisterRoutes(router *gin.RouterGroup) {
@@ -27,20 +29,20 @@ func NewMediaHandler(s *service.MediaService) *MediaHandler {
 func (h *MediaHandler) Upload(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "file không hợp lệ"})
+		response.Error(c, http.StatusBadRequest, i18n.ErrInvalidFile)
 		return
 	}
 
 	ownerType := c.PostForm("owner_type")
 	if ownerType == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "thiếu owner_type"})
+		response.Error(c, http.StatusBadRequest, i18n.ErrMissingOwnerType)
 		return
 	}
 
 	ownerIdStr := c.PostForm("owner_id")
 	ownerId, err := uuid.Parse(ownerIdStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "owner_id không hợp lệ"})
+		response.Error(c, http.StatusBadRequest, i18n.ErrInvalidOwnerID)
 		return
 	}
 
@@ -48,11 +50,11 @@ func (h *MediaHandler) Upload(c *gin.Context) {
 
 	media, err := h.service.Upload(c.Request.Context(), file, ownerType, ownerId, sortOrder)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.Error(c, http.StatusBadRequest, i18n.ErrBadRequest, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusCreated, media)
+	response.Success(c, http.StatusCreated, media, i18n.MsgMediaUploaded)
 }
 
 func (h *MediaHandler) GetByOwner(c *gin.Context) {
@@ -61,31 +63,31 @@ func (h *MediaHandler) GetByOwner(c *gin.Context) {
 
 	ownerId, err := uuid.Parse(ownerIdStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "owner_id không hợp lệ"})
+		response.Error(c, http.StatusBadRequest, i18n.ErrInvalidOwnerID)
 		return
 	}
 
 	media, err := h.service.GetByOwner(c.Request.Context(), ownerType, ownerId)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "lỗi server"})
+		response.Error(c, http.StatusInternalServerError, i18n.ErrServer)
 		return
 	}
 
-	c.JSON(http.StatusOK, media)
+	response.Success(c, http.StatusOK, media, i18n.MsgSuccess)
 }
 
 func (h *MediaHandler) Delete(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "id không hợp lệ"})
+		response.Error(c, http.StatusBadRequest, i18n.ErrInvalidID)
 		return
 	}
 
 	if err := h.service.Delete(c.Request.Context(), id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "xóa thất bại"})
+		response.Error(c, http.StatusInternalServerError, i18n.ErrDeleteFailed)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "đã xóa"})
+	response.Message(c, http.StatusOK, i18n.MsgMediaDeleted)
 }
