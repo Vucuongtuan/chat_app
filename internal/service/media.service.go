@@ -1,19 +1,20 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"mime/multipart"
 	"path/filepath"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 
 	"chatapp/internal/model"
+	"chatapp/internal/repository"
 	"chatapp/pkg/storage"
 )
 
 type MediaService struct {
-	db      *gorm.DB
+	repo    repository.MediaRepository
 	storage storage.Storage
 }
 
@@ -22,11 +23,14 @@ var allowedExt = map[string]bool{
 	".mp4": true, ".mov": true,
 }
 
-func NewMediaService(db *gorm.DB, s storage.Storage) *MediaService {
-	return &MediaService{db: db, storage: s}
+func NewMediaService(repo repository.MediaRepository, s storage.Storage) *MediaService {
+	return &MediaService{repo: repo, storage: s}
 }
 
-func (s *MediaService) Upload(file *multipart.FileHeader, ownerType string, ownerId uuid.UUID, sortOrder int) (*model.Media, error) {
+func (s *MediaService) Upload(ctx context.Context, file *multipart.FileHeader, ownerType string, ownerID uuid.UUID, sortOrder int) (*model.Media, error) {
+	if file == nil || file.Size == 0 {
+		return nil, fmt.Errorf("file không được để trống")
+	}
 	ext := filepath.Ext(file.Filename)
 	if !allowedExt[ext] {
 		return nil, fmt.Errorf("định dạng file không được hỗ trợ: %s", ext)
@@ -48,27 +52,24 @@ func (s *MediaService) Upload(file *multipart.FileHeader, ownerType string, owne
 		Url:       url,
 		Type:      mediaType,
 		OwnerType: ownerType,
-		OwnerId:   ownerId,
+		OwnerId:   ownerID,
 		SortOrder: sortOrder,
 	}
 
-	if err := s.db.Create(media).Error; err != nil {
+	if err := s.repo.Create(ctx, media); err != nil {
+		_ = s.storage.Delete(filename)
 		return nil, err
 	}
 
 	return media, nil
 }
-func (s *MediaService) GetByOwner(ownerType string, ownerId uuid.UUID) ([]model.Media, error) {
-	var media []model.Media
-	err := s.db.Where("owner_type = ? AND owner_id = ?", ownerType, ownerId).
-		Order("sort_order asc").
-		Find(&media).Error
-	return media, err
+func (s *MediaService) GetByOwner(ctx context.Context, ownerType string, ownerID uuid.UUID) ([]model.Media, error) {
+	return s.repo.FindByOwner(ctx, ownerType, ownerID)
 }
 
-func (s *MediaService) Delete(id uuid.UUID) error {
-	var media model.Media
-	if err := s.db.First(&media, "id = ?", id).Error; err != nil {
+func (s *MediaService) Delete(ctx context.Context, id uuid.UUID) error {
+	media, err := s.repo.FindByID(ctx, id)
+	if err != nil {
 		return err
 	}
 
@@ -77,5 +78,5 @@ func (s *MediaService) Delete(id uuid.UUID) error {
 		return err
 	}
 
-	return s.db.Delete(&model.Media{}, "id = ?", id).Error
+	return s.repo.Delete(ctx, id)
 }

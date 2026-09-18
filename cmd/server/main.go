@@ -3,6 +3,7 @@ package main
 import (
 	"chatapp/internal/config"
 	"chatapp/internal/handler"
+	"chatapp/internal/repository"
 	"chatapp/internal/service"
 	"chatapp/pkg/database"
 	"chatapp/pkg/storage"
@@ -23,8 +24,9 @@ func main() {
 		"/uploads",
 	)
 
+	mediaRepo := repository.NewMediaRepository(db)
 	mediaService := service.NewMediaService(
-		db,
+		mediaRepo,
 		mediaStorage,
 	)
 

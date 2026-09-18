@@ -46,7 +46,7 @@ func (h *MediaHandler) Upload(c *gin.Context) {
 
 	sortOrder, _ := strconv.Atoi(c.DefaultPostForm("sort_order", "0"))
 
-	media, err := h.service.Upload(file, ownerType, ownerId, sortOrder)
+	media, err := h.service.Upload(c.Request.Context(), file, ownerType, ownerId, sortOrder)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -65,7 +65,7 @@ func (h *MediaHandler) GetByOwner(c *gin.Context) {
 		return
 	}
 
-	media, err := h.service.GetByOwner(ownerType, ownerId)
+	media, err := h.service.GetByOwner(c.Request.Context(), ownerType, ownerId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "lỗi server"})
 		return
@@ -82,7 +82,7 @@ func (h *MediaHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Delete(id); err != nil {
+	if err := h.service.Delete(c.Request.Context(), id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "xóa thất bại"})
 		return
 	}
