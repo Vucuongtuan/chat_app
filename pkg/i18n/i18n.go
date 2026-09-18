@@ -36,19 +36,19 @@ const (
 
 // Error message keys
 const (
-	ErrBadRequest          = "bad_request"
-	ErrUnauthorized        = "unauthorized"
-	ErrForbidden           = "forbidden"
-	ErrNotFound            = "not_found"
-	ErrInternalServer      = "internal_server_error"
-	ErrValidation          = "validation_error"
-	ErrInvalidCredentials  = "invalid_credentials"
-	ErrDuplicateResource   = "duplicate_resource"
-	ErrDatabase            = "database_error"
-	ErrExternalService     = "external_service_error"
+	ErrBadRequest         = "bad_request"
+	ErrUnauthorized       = "unauthorized"
+	ErrForbidden          = "forbidden"
+	ErrNotFound           = "not_found"
+	ErrInternalServer     = "internal_server_error"
+	ErrValidation         = "validation_error"
+	ErrInvalidCredentials = "invalid_credentials"
+	ErrDuplicateResource  = "duplicate_resource"
+	ErrDatabase           = "database_error"
+	ErrExternalService    = "external_service_error"
 
 	// User-specific error keys
-	ErrUserNotFound = "user_not_found"
+	ErrUserNotFound  = "user_not_found"
 	ErrInvalidUserID = "invalid_user_id"
 
 	// Media-specific error keys
