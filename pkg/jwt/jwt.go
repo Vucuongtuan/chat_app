@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	AccessToken      = "access"
-	RefreshTokenType = "refresh"
+	AccessToken       = "access"
+	RefreshTokenType  = "refresh"
+	TempTwoFactorType = "temp_2fa"
 )
 
 var (
@@ -24,10 +25,59 @@ var (
 
 type Claims struct {
 	UserID    string `json:"user_id"`
+	AccountID string `json:"account_id,omitempty"`
 	Email     string `json:"email,omitempty"`
 	Username  string `json:"username,omitempty"`
+	SessionID string `json:"session_id,omitempty"`
+	DeviceID  string `json:"device_id,omitempty"`
+	IsPrimary bool   `json:"is_primary,omitempty"`
 	TokenType string `json:"token_type"`
 	jwtlib.RegisteredClaims
+}
+
+func GenerateSessionToken(user *model.User, accountID, sessionID, deviceID string, isPrimary bool, secret string, expiration time.Duration) (string, error) {
+	if user == nil {
+		return "", errors.New("user must not be nil")
+	}
+
+	return sign(Claims{
+		UserID:    user.ID.String(),
+		AccountID: accountID,
+		Username:  user.FullName,
+		SessionID: sessionID,
+		DeviceID:  deviceID,
+		IsPrimary: isPrimary,
+		TokenType: AccessToken,
+	}, secret, expiration)
+}
+
+func GenerateSessionRefreshToken(user *model.User, accountID, sessionID, deviceID string, isPrimary bool, secret string, expiration time.Duration) (string, error) {
+	if user == nil {
+		return "", errors.New("user must not be nil")
+	}
+
+	return sign(Claims{
+		UserID:    user.ID.String(),
+		AccountID: accountID,
+		Username:  user.FullName,
+		SessionID: sessionID,
+		DeviceID:  deviceID,
+		IsPrimary: isPrimary,
+		TokenType: RefreshTokenType,
+	}, secret, expiration)
+}
+
+func GenerateTempTwoFactorToken(accountID, email string, secret string, expiration time.Duration) (string, error) {
+	if strings.TrimSpace(accountID) == "" {
+		return "", errors.New("account ID must not be empty")
+	}
+
+	return sign(Claims{
+		UserID:    accountID,
+		AccountID: accountID,
+		Email:     email,
+		TokenType: TempTwoFactorType,
+	}, secret, expiration)
 }
 
 func GenerateToken(user *model.User, secret string, expiration time.Duration) (string, error) {
@@ -76,6 +126,34 @@ func ValidateToken(tokenString, secret string) (*Claims, error) {
 		return nil, errors.New("jwt user ID is required")
 	}
 	if claims.TokenType != AccessToken && claims.TokenType != RefreshTokenType {
+		return nil, ErrInvalidTokenType
+	}
+
+	return claims, nil
+}
+
+func ValidateTempTwoFactorToken(tokenString, secret string) (*Claims, error) {
+	if strings.TrimSpace(secret) == "" {
+		return nil, ErrEmptySecret
+	}
+
+	claims := new(Claims)
+	token, err := jwtlib.ParseWithClaims(tokenString, claims, func(token *jwtlib.Token) (any, error) {
+		if token.Method.Alg() != jwtlib.SigningMethodHS256.Alg() {
+			return nil, fmt.Errorf("unexpected signing method %q", token.Method.Alg())
+		}
+		return []byte(secret), nil
+	}, jwtlib.WithValidMethods([]string{jwtlib.SigningMethodHS256.Alg()}))
+	if err != nil {
+		return nil, err
+	}
+	if token == nil || !token.Valid {
+		return nil, errors.New("invalid jwt token")
+	}
+	if strings.TrimSpace(claims.AccountID) == "" && strings.TrimSpace(claims.UserID) == "" {
+		return nil, errors.New("jwt user/account ID is required")
+	}
+	if claims.TokenType != TempTwoFactorType {
 		return nil, ErrInvalidTokenType
 	}
 

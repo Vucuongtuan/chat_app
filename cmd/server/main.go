@@ -8,6 +8,7 @@ import (
 	"chatapp/internal/service"
 	"chatapp/pkg/database"
 	"chatapp/pkg/i18n"
+	"chatapp/pkg/mailer"
 	"chatapp/pkg/storage"
 
 	"github.com/gin-gonic/gin"
@@ -41,6 +42,13 @@ func main() {
 	userService := service.NewUserService(userRepo)
 	userHandler := handler.NewUserHandler(userService)
 
+	// Auth & Devices & 2FA
+	authRepo := repository.NewAuthRepository(db)
+	deviceRepo := repository.NewDeviceRepository(db)
+	mailService := mailer.NewMailer(cfg)
+	authService := service.NewAuthService(authRepo, deviceRepo, mailService, cfg)
+	authHandler := handler.NewAuthHandler(authService)
+
 	// Middleware
 	authMiddleware := middleware.Auth(cfg.JWTSecret)
 
@@ -49,6 +57,7 @@ func main() {
 
 	// Setup routes
 	handler.Setup(router, &handler.Handlers{
+		Auth:  authHandler,
 		Media: mediaHandler,
 		User:  userHandler,
 	}, authMiddleware)

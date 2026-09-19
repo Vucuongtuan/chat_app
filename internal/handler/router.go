@@ -12,6 +12,7 @@ import (
 type Handlers struct {
 	Media *MediaHandler
 	User  *UserHandler
+	Auth  *AuthHandler
 }
 
 func Setup(router *gin.Engine, h *Handlers, authMiddleware ...gin.HandlerFunc) {
@@ -20,6 +21,10 @@ func Setup(router *gin.Engine, h *Handlers, authMiddleware ...gin.HandlerFunc) {
 		api.GET("/test", func(c *gin.Context) {
 			response.Success(c, http.StatusOK, gin.H{"status": "ok"}, i18n.MsgSuccess)
 		})
+
+		if h.Auth != nil {
+			h.Auth.RegisterRoutes(api, authMiddleware...)
+		}
 
 		if h.Media != nil {
 			h.Media.RegisterRoutes(api)

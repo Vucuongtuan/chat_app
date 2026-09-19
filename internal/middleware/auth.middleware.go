@@ -12,7 +12,11 @@ import (
 )
 
 const (
-	ContextUserID = "user_id"
+	ContextUserID    = "user_id"
+	ContextAccountID = "account_id"
+	ContextSessionID = "session_id"
+	ContextDeviceID  = "device_id"
+	ContextIsPrimary = "is_primary"
 )
 
 func Auth(secret string) gin.HandlerFunc {
@@ -39,6 +43,10 @@ func Auth(secret string) gin.HandlerFunc {
 		}
 
 		c.Set(ContextUserID, claims.UserID)
+		c.Set(ContextAccountID, claims.AccountID)
+		c.Set(ContextSessionID, claims.SessionID)
+		c.Set(ContextDeviceID, claims.DeviceID)
+		c.Set(ContextIsPrimary, claims.IsPrimary)
 		c.Next()
 	}
 }
@@ -51,3 +59,52 @@ func GetUserID(c *gin.Context) string {
 	}
 	return ""
 }
+
+func GetAccountID(c *gin.Context) string {
+	if val, exists := c.Get(ContextAccountID); exists {
+		if id, ok := val.(string); ok {
+			return id
+		}
+	}
+	return ""
+}
+
+func GetSessionID(c *gin.Context) string {
+	if val, exists := c.Get(ContextSessionID); exists {
+		if id, ok := val.(string); ok {
+			return id
+		}
+	}
+	return ""
+}
+
+func GetDeviceID(c *gin.Context) string {
+	if val, exists := c.Get(ContextDeviceID); exists {
+		if id, ok := val.(string); ok {
+			return id
+		}
+	}
+	return ""
+}
+
+func IsPrimaryDevice(c *gin.Context) bool {
+	if val, exists := c.Get(ContextIsPrimary); exists {
+		if isPrimary, ok := val.(bool); ok {
+			return isPrimary
+		}
+	}
+	return false
+}
+
+// RequirePrimaryDevice verifies that the incoming request is made from the primary device
+func RequirePrimaryDevice() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !IsPrimaryDevice(c) {
+			response.Error(c, http.StatusForbidden, i18n.ErrOnlyPrimaryDeviceAllowed)
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+

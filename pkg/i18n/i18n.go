@@ -29,9 +29,16 @@ const (
 	MsgDeleted         = "deleted"
 	MsgMediaUploaded   = "media_uploaded"
 	MsgMediaDeleted    = "media_deleted"
-	MsgLoginSuccess    = "login_success"
-	MsgRegisterSuccess = "register_success"
-	MsgProfileUpdated  = "profile_updated"
+	MsgLoginSuccess             = "login_success"
+	MsgRegisterSuccess          = "register_success"
+	MsgProfileUpdated           = "profile_updated"
+	MsgOTPSent                  = "otp_sent"
+	Msg2FAEnabled               = "two_factor_enabled"
+	Msg2FADisabled              = "two_factor_disabled"
+	MsgDeviceLoggedOut          = "device_logged_out"
+	MsgAllOtherDevicesLoggedOut = "all_other_devices_logged_out"
+	MsgPrimaryTransferred       = "primary_transferred"
+	MsgPasswordResetSuccess     = "password_reset_success"
 )
 
 // Error message keys
@@ -46,6 +53,19 @@ const (
 	ErrDuplicateResource  = "duplicate_resource"
 	ErrDatabase           = "database_error"
 	ErrExternalService    = "external_service_error"
+
+	// Auth & Device & 2FA specific error keys
+	ErrOnlyPrimaryDeviceAllowed  = "only_primary_device_allowed"
+	ErrInvalidOTP                = "invalid_otp"
+	ErrOTPExpired                = "otp_expired"
+	ErrTwoFactorRequired         = "two_factor_required"
+	ErrTwoFactorAlreadyEnabled   = "two_factor_already_enabled"
+	ErrTwoFactorNotEnabled       = "two_factor_not_enabled"
+	ErrEmailRequiredFor2FA       = "email_required_for_2fa"
+	ErrSessionNotFound           = "session_not_found"
+	ErrCannotLogoutCurrentDevice = "cannot_logout_current_device"
+	ErrInvalidOrExpiredToken     = "invalid_or_expired_token"
+	ErrAccountNotFound           = "account_not_found"
 
 	// User-specific error keys
 	ErrUserNotFound  = "user_not_found"
@@ -66,15 +86,22 @@ const (
 var messages = map[Language]map[string]string{
 	LangVI: {
 		// Success
-		MsgSuccess:         "Thao tác thành công",
-		MsgCreated:         "Khởi tạo thành công",
-		MsgUpdated:         "Cập nhật thành công",
-		MsgDeleted:         "Đã xóa thành công",
-		MsgMediaUploaded:   "Tải lên media thành công",
-		MsgMediaDeleted:    "Đã xóa media thành công",
-		MsgLoginSuccess:    "Đăng nhập thành công",
-		MsgRegisterSuccess: "Đăng ký tài khoản thành công",
-		MsgProfileUpdated:  "Cập nhật thông tin thành công",
+		MsgSuccess:                  "Thao tác thành công",
+		MsgCreated:                  "Khởi tạo thành công",
+		MsgUpdated:                  "Cập nhật thành công",
+		MsgDeleted:                  "Đã xóa thành công",
+		MsgMediaUploaded:            "Tải lên media thành công",
+		MsgMediaDeleted:             "Đã xóa media thành công",
+		MsgLoginSuccess:             "Đăng nhập thành công",
+		MsgRegisterSuccess:          "Đăng ký tài khoản thành công",
+		MsgProfileUpdated:           "Cập nhật thông tin thành công",
+		MsgOTPSent:                  "Mã xác thực đã được gửi đến email",
+		Msg2FAEnabled:               "Đã kích hoạt xác thực 2 bước thành công",
+		Msg2FADisabled:              "Đã tắt xác thực 2 bước thành công",
+		MsgDeviceLoggedOut:          "Đã đăng xuất thiết bị thành công",
+		MsgAllOtherDevicesLoggedOut: "Đã đăng xuất tất cả các thiết bị khác thành công",
+		MsgPrimaryTransferred:       "Đã chuyển quyền thiết bị chính thành công",
+		MsgPasswordResetSuccess:     "Đặt lại mật khẩu thành công",
 
 		// Common Errors
 		ErrBadRequest:         "Yêu cầu không hợp lệ",
@@ -87,6 +114,19 @@ var messages = map[Language]map[string]string{
 		ErrDuplicateResource:  "Tài nguyên đã tồn tại trong hệ thống",
 		ErrDatabase:           "Lỗi thao tác cơ sở dữ liệu",
 		ErrExternalService:    "Lỗi kết nối dịch vụ bên thứ ba",
+
+		// Auth & Device & 2FA Errors
+		ErrOnlyPrimaryDeviceAllowed:  "Chỉ thiết bị chính mới có quyền thực hiện thao tác này",
+		ErrInvalidOTP:                "Mã xác thực không hợp lệ",
+		ErrOTPExpired:                "Mã xác thực đã hết hạn",
+		ErrTwoFactorRequired:         "Tài khoản yêu cầu xác thực 2 bước qua email",
+		ErrTwoFactorAlreadyEnabled:   "Xác thực 2 bước đã được kích hoạt trước đó",
+		ErrTwoFactorNotEnabled:       "Xác thực 2 bước chưa được kích hoạt",
+		ErrEmailRequiredFor2FA:       "Tài khoản cần có email hợp lệ để bật xác thực 2 bước",
+		ErrSessionNotFound:           "Phiên thiết bị không tồn tại hoặc đã hết hạn",
+		ErrCannotLogoutCurrentDevice: "Không thể thu hồi thiết bị hiện tại qua chức năng quản lý từ xa",
+		ErrInvalidOrExpiredToken:     "Mã xác thực hoặc token không hợp lệ hoặc đã hết hạn",
+		ErrAccountNotFound:           "Tài khoản không tồn tại",
 
 		// User Errors
 		ErrUserNotFound:  "Không tìm thấy người dùng",
@@ -104,15 +144,22 @@ var messages = map[Language]map[string]string{
 	},
 	LangEN: {
 		// Success
-		MsgSuccess:         "Operation successful",
-		MsgCreated:         "Created successfully",
-		MsgUpdated:         "Updated successfully",
-		MsgDeleted:         "Deleted successfully",
-		MsgMediaUploaded:   "Media uploaded successfully",
-		MsgMediaDeleted:    "Media deleted successfully",
-		MsgLoginSuccess:    "Login successful",
-		MsgRegisterSuccess: "Account registered successfully",
-		MsgProfileUpdated:  "Profile updated successfully",
+		MsgSuccess:                  "Operation successful",
+		MsgCreated:                  "Created successfully",
+		MsgUpdated:                  "Updated successfully",
+		MsgDeleted:                  "Deleted successfully",
+		MsgMediaUploaded:            "Media uploaded successfully",
+		MsgMediaDeleted:             "Media deleted successfully",
+		MsgLoginSuccess:             "Login successful",
+		MsgRegisterSuccess:          "Account registered successfully",
+		MsgProfileUpdated:           "Profile updated successfully",
+		MsgOTPSent:                  "Verification code sent to email",
+		Msg2FAEnabled:               "Two-factor authentication enabled successfully",
+		Msg2FADisabled:              "Two-factor authentication disabled successfully",
+		MsgDeviceLoggedOut:          "Device logged out successfully",
+		MsgAllOtherDevicesLoggedOut: "All other devices logged out successfully",
+		MsgPrimaryTransferred:       "Primary device transferred successfully",
+		MsgPasswordResetSuccess:     "Password reset successfully",
 
 		// Common Errors
 		ErrBadRequest:         "Invalid request",
@@ -125,6 +172,19 @@ var messages = map[Language]map[string]string{
 		ErrDuplicateResource:  "Resource already exists",
 		ErrDatabase:           "Database error",
 		ErrExternalService:    "External service error",
+
+		// Auth & Device & 2FA Errors
+		ErrOnlyPrimaryDeviceAllowed:  "Only the primary device is allowed to perform this action",
+		ErrInvalidOTP:                "Invalid verification code",
+		ErrOTPExpired:                "Verification code has expired",
+		ErrTwoFactorRequired:         "Two-factor authentication via email required",
+		ErrTwoFactorAlreadyEnabled:   "Two-factor authentication is already enabled",
+		ErrTwoFactorNotEnabled:       "Two-factor authentication is not enabled",
+		ErrEmailRequiredFor2FA:       "An email address is required to enable two-factor authentication",
+		ErrSessionNotFound:           "Device session not found or already expired",
+		ErrCannotLogoutCurrentDevice: "Cannot logout current device via remote management",
+		ErrInvalidOrExpiredToken:     "Invalid or expired token",
+		ErrAccountNotFound:           "Account not found",
 
 		// User Errors
 		ErrUserNotFound:  "User not found",
