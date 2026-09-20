@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/smtp"
 	"strings"
+	"sync"
 
 	"chatapp/internal/config"
 )
@@ -13,15 +14,70 @@ type Mailer interface {
 	SendOTP(to string, code string, purpose string) error
 }
 
+type emailJob struct {
+	to      string
+	code    string
+	purpose string
+}
+
+type smtpSendFunc func(addr string, a smtp.Auth, from string, to []string, msg []byte) error
+
 type smtpMailer struct {
-	cfg *config.Config
+	cfg    *config.Config
+	queue  chan emailJob
+	sender smtpSendFunc
+	once   sync.Once
 }
 
 func NewMailer(cfg *config.Config) Mailer {
-	return &smtpMailer{cfg: cfg}
+	m := &smtpMailer{
+		cfg:   cfg,
+		queue: make(chan emailJob, 100),
+	}
+	m.sender = smtpSendMail
+	m.once.Do(func() { go m.run() })
+	return m
+}
+
+func smtpSendMail(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
+	return smtp.SendMail(addr, a, from, to, msg)
+}
+
+func (m *smtpMailer) run() {
+	for job := range m.queue {
+		m.sendOTPAsync(job.to, job.code, job.purpose)
+	}
 }
 
 func (m *smtpMailer) SendOTP(to string, code string, purpose string) error {
+	if m == nil || m.cfg == nil {
+		return nil
+	}
+	if strings.TrimSpace(to) == "" {
+		return nil
+	}
+
+	if m.queue == nil {
+		m.queue = make(chan emailJob, 100)
+	}
+	if m.sender == nil {
+		m.sender = smtpSendMail
+	}
+
+	select {
+	case m.queue <- emailJob{to: to, code: code, purpose: purpose}:
+		return nil
+	default:
+		go m.sendOTPAsync(to, code, purpose)
+		return nil
+	}
+}
+
+func (m *smtpMailer) sendOTPAsync(to string, code string, purpose string) {
+	if m == nil || m.cfg == nil {
+		return
+	}
+
 	subject := "Mã xác thực tài khoản ChatApp"
 	switch purpose {
 	case "2fa_login":
@@ -40,7 +96,7 @@ func (m *smtpMailer) SendOTP(to string, code string, purpose string) error {
 	log.Printf("[MAILER DEBUG] Gửi mã OTP [%s] tới email [%s] - Mục đích: %s", code, to, purpose)
 
 	if strings.TrimSpace(m.cfg.SMTPHost) == "" {
-		return nil
+		return
 	}
 
 	from := m.cfg.SMTPFrom
@@ -59,11 +115,12 @@ func (m *smtpMailer) SendOTP(to string, code string, purpose string) error {
 		auth = smtp.PlainAuth("", m.cfg.SMTPUser, m.cfg.SMTPPassword, m.cfg.SMTPHost)
 	}
 
-	err := smtp.SendMail(addr, auth, from, []string{to}, msg)
-	if err != nil {
-		log.Printf("[MAILER ERROR] Lỗi gửi email tới %s: %v", to, err)
-		return err
+	if m.sender == nil {
+		m.sender = smtpSendMail
 	}
 
-	return nil
+	err := m.sender(addr, auth, from, []string{to}, msg)
+	if err != nil {
+		log.Printf("[MAILER ERROR] Lỗi gửi email tới %s: %v", to, err)
+	}
 }

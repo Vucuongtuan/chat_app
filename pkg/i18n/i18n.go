@@ -23,12 +23,12 @@ const langContextKey contextKey = "app_language"
 
 // Success message keys
 const (
-	MsgSuccess         = "success"
-	MsgCreated         = "created"
-	MsgUpdated         = "updated"
-	MsgDeleted         = "deleted"
-	MsgMediaUploaded   = "media_uploaded"
-	MsgMediaDeleted    = "media_deleted"
+	MsgSuccess                  = "success"
+	MsgCreated                  = "created"
+	MsgUpdated                  = "updated"
+	MsgDeleted                  = "deleted"
+	MsgMediaUploaded            = "media_uploaded"
+	MsgMediaDeleted             = "media_deleted"
 	MsgLoginSuccess             = "login_success"
 	MsgRegisterSuccess          = "register_success"
 	MsgProfileUpdated           = "profile_updated"
@@ -39,6 +39,32 @@ const (
 	MsgAllOtherDevicesLoggedOut = "all_other_devices_logged_out"
 	MsgPrimaryTransferred       = "primary_transferred"
 	MsgPasswordResetSuccess     = "password_reset_success"
+
+	// Room specific success keys
+	MsgRoomCreated   = "room_created"
+	MsgRoomUpdated   = "room_updated"
+	MsgRoomDeleted   = "room_deleted"
+	MsgMemberAdded   = "member_added"
+	MsgMemberRemoved = "member_removed"
+	MsgMemberUpdated = "member_updated"
+	MsgRoomJoined    = "room_joined"
+
+	// Message specific success keys
+	MsgMessageSent          = "message_sent"
+	MsgMessageEdited        = "message_edited"
+	MsgMessageDeleted       = "message_deleted"
+	MsgReactionAdded        = "reaction_added"
+	MsgReactionRemoved      = "reaction_removed"
+	MsgMessageStatusUpdated = "message_status_updated"
+
+	// Post specific success keys
+	MsgPostCreated    = "post_created"
+	MsgPostUpdated    = "post_updated"
+	MsgPostDeleted    = "post_deleted"
+	MsgPostLiked      = "post_liked"
+	MsgPostUnliked    = "post_unliked"
+	MsgCommentAdded   = "comment_added"
+	MsgCommentDeleted = "comment_deleted"
 )
 
 // Error message keys
@@ -80,6 +106,27 @@ const (
 	ErrInvalidID        = "invalid_id"
 	ErrDeleteFailed     = "delete_failed"
 	ErrServer           = "server_error"
+
+	// Room specific error keys
+	ErrRoomNotFound        = "room_not_found"
+	ErrNotRoomMember       = "not_room_member"
+	ErrRoomForbidden       = "room_forbidden"
+	ErrInvalidRoomID       = "invalid_room_id"
+	ErrInvalidInviteCode   = "invalid_invite_code"
+	ErrMemberAlreadyExists = "member_already_exists"
+	ErrMemberNotFound      = "member_not_found"
+
+	// Message specific error keys
+	ErrMessageNotFound  = "message_not_found"
+	ErrMessageForbidden = "message_forbidden"
+	ErrInvalidMessageID = "invalid_message_id"
+
+	// Post specific error keys
+	ErrPostNotFound     = "post_not_found"
+	ErrPostForbidden    = "post_forbidden"
+	ErrInvalidPostID    = "invalid_post_id"
+	ErrCommentNotFound  = "comment_not_found"
+	ErrInvalidCommentID = "invalid_comment_id"
 )
 
 // Message dictionary by language
@@ -102,6 +149,32 @@ var messages = map[Language]map[string]string{
 		MsgAllOtherDevicesLoggedOut: "Đã đăng xuất tất cả các thiết bị khác thành công",
 		MsgPrimaryTransferred:       "Đã chuyển quyền thiết bị chính thành công",
 		MsgPasswordResetSuccess:     "Đặt lại mật khẩu thành công",
+
+		// Room Success
+		MsgRoomCreated:   "Tạo phòng chat thành công",
+		MsgRoomUpdated:   "Cập nhật phòng chat thành công",
+		MsgRoomDeleted:   "Xóa phòng chat thành công",
+		MsgMemberAdded:   "Thêm thành viên thành công",
+		MsgMemberRemoved: "Đã xóa thành viên khỏi phòng chat",
+		MsgMemberUpdated: "Cập nhật thành viên thành công",
+		MsgRoomJoined:    "Tham gia phòng chat thành công",
+
+		// Message Success
+		MsgMessageSent:          "Gửi tin nhắn thành công",
+		MsgMessageEdited:        "Chỉnh sửa tin nhắn thành công",
+		MsgMessageDeleted:       "Xóa tin nhắn thành công",
+		MsgReactionAdded:        "Thả cảm xúc thành công",
+		MsgReactionRemoved:      "Gỡ cảm xúc thành công",
+		MsgMessageStatusUpdated: "Cập nhật trạng thái tin nhắn thành công",
+
+		// Post Success
+		MsgPostCreated:    "Đăng bài viết thành công",
+		MsgPostUpdated:    "Cập nhật bài viết thành công",
+		MsgPostDeleted:    "Xóa bài viết thành công",
+		MsgPostLiked:      "Đã thích bài viết",
+		MsgPostUnliked:    "Đã bỏ thích bài viết",
+		MsgCommentAdded:   "Thêm bình luận thành công",
+		MsgCommentDeleted: "Xóa bình luận thành công",
 
 		// Common Errors
 		ErrBadRequest:         "Yêu cầu không hợp lệ",
@@ -141,6 +214,27 @@ var messages = map[Language]map[string]string{
 		ErrInvalidID:        "id không hợp lệ",
 		ErrDeleteFailed:     "Xóa dữ liệu thất bại",
 		ErrServer:           "Lỗi máy chủ",
+
+		// Room Errors
+		ErrRoomNotFound:        "Không tìm thấy phòng chat",
+		ErrNotRoomMember:       "Bạn không phải thành viên của phòng chat này",
+		ErrRoomForbidden:       "Bạn không có quyền thực hiện thao tác này trong phòng chat",
+		ErrInvalidRoomID:       "ID phòng chat không hợp lệ",
+		ErrInvalidInviteCode:   "Mã mời không hợp lệ",
+		ErrMemberAlreadyExists: "Thành viên đã có trong phòng chat",
+		ErrMemberNotFound:      "Không tìm thấy thành viên trong phòng chat",
+
+		// Message Errors
+		ErrMessageNotFound:  "Không tìm thấy tin nhắn",
+		ErrMessageForbidden: "Bạn không có quyền thao tác trên tin nhắn này",
+		ErrInvalidMessageID: "ID tin nhắn không hợp lệ",
+
+		// Post Errors
+		ErrPostNotFound:     "Không tìm thấy bài viết",
+		ErrPostForbidden:    "Bạn không có quyền thao tác trên bài viết này",
+		ErrInvalidPostID:    "ID bài viết không hợp lệ",
+		ErrCommentNotFound:  "Không tìm thấy bình luận",
+		ErrInvalidCommentID: "ID bình luận không hợp lệ",
 	},
 	LangEN: {
 		// Success
@@ -160,6 +254,32 @@ var messages = map[Language]map[string]string{
 		MsgAllOtherDevicesLoggedOut: "All other devices logged out successfully",
 		MsgPrimaryTransferred:       "Primary device transferred successfully",
 		MsgPasswordResetSuccess:     "Password reset successfully",
+
+		// Room Success
+		MsgRoomCreated:   "Room created successfully",
+		MsgRoomUpdated:   "Room updated successfully",
+		MsgRoomDeleted:   "Room deleted successfully",
+		MsgMemberAdded:   "Member added successfully",
+		MsgMemberRemoved: "Member removed successfully",
+		MsgMemberUpdated: "Member updated successfully",
+		MsgRoomJoined:    "Joined room successfully",
+
+		// Message Success
+		MsgMessageSent:          "Message sent successfully",
+		MsgMessageEdited:        "Message edited successfully",
+		MsgMessageDeleted:       "Message deleted successfully",
+		MsgReactionAdded:        "Reaction added successfully",
+		MsgReactionRemoved:      "Reaction removed successfully",
+		MsgMessageStatusUpdated: "Message status updated successfully",
+
+		// Post Success
+		MsgPostCreated:    "Post created successfully",
+		MsgPostUpdated:    "Post updated successfully",
+		MsgPostDeleted:    "Post deleted successfully",
+		MsgPostLiked:      "Post liked",
+		MsgPostUnliked:    "Post unliked",
+		MsgCommentAdded:   "Comment added successfully",
+		MsgCommentDeleted: "Comment deleted successfully",
 
 		// Common Errors
 		ErrBadRequest:         "Invalid request",
@@ -199,17 +319,36 @@ var messages = map[Language]map[string]string{
 		ErrInvalidID:        "Invalid id",
 		ErrDeleteFailed:     "Failed to delete",
 		ErrServer:           "Server error",
+
+		// Room Errors
+		ErrRoomNotFound:        "Room not found",
+		ErrNotRoomMember:       "You are not a member of this room",
+		ErrRoomForbidden:       "You do not have permission in this room",
+		ErrInvalidRoomID:       "Invalid room ID",
+		ErrInvalidInviteCode:   "Invalid invite code",
+		ErrMemberAlreadyExists: "Member already exists in this room",
+		ErrMemberNotFound:      "Member not found in this room",
+
+		// Message Errors
+		ErrMessageNotFound:  "Message not found",
+		ErrMessageForbidden: "You do not have permission for this message",
+		ErrInvalidMessageID: "Invalid message ID",
+
+		// Post Errors
+		ErrPostNotFound:     "Post not found",
+		ErrPostForbidden:    "You do not have permission for this post",
+		ErrInvalidPostID:    "Invalid post ID",
+		ErrCommentNotFound:  "Comment not found",
+		ErrInvalidCommentID: "Invalid comment ID",
 	},
 }
 
-// NormalizeLanguage parses language input to supported Language (vi or en)
 func NormalizeLanguage(raw string) Language {
 	raw = strings.TrimSpace(strings.ToLower(raw))
 	if raw == "" {
 		return DefaultLanguage
 	}
 
-	// Direct match
 	if raw == "vi" || strings.HasPrefix(raw, "vi-") || strings.HasPrefix(raw, "vi_") {
 		return LangVI
 	}
@@ -217,7 +356,6 @@ func NormalizeLanguage(raw string) Language {
 		return LangEN
 	}
 
-	// Parse Accept-Language header format: "en-US,en;q=0.9,vi;q=0.8"
 	parts := strings.Split(raw, ",")
 	for _, part := range parts {
 		token := strings.TrimSpace(strings.Split(part, ";")[0])
@@ -232,30 +370,25 @@ func NormalizeLanguage(raw string) Language {
 	return DefaultLanguage
 }
 
-// GetLanguage extracts the language from gin.Context
 func GetLanguage(c *gin.Context) Language {
 	if c == nil {
 		return DefaultLanguage
 	}
 
-	// 1. Check gin context if set by middleware
 	if val, exists := c.Get(string(langContextKey)); exists {
 		if lang, ok := val.(Language); ok {
 			return lang
 		}
 	}
 
-	// 2. Query param: ?lang=vi or ?lang=en
 	if langQuery := c.Query("lang"); langQuery != "" {
 		return NormalizeLanguage(langQuery)
 	}
 
-	// 3. Custom Header: X-Language
 	if langHeader := c.GetHeader("X-Language"); langHeader != "" {
 		return NormalizeLanguage(langHeader)
 	}
 
-	// 4. Standard Accept-Language header
 	if acceptLang := c.GetHeader("Accept-Language"); acceptLang != "" {
 		return NormalizeLanguage(acceptLang)
 	}
@@ -263,7 +396,6 @@ func GetLanguage(c *gin.Context) Language {
 	return DefaultLanguage
 }
 
-// FromContext extracts the language from standard context.Context
 func FromContext(ctx context.Context) Language {
 	if ctx == nil {
 		return DefaultLanguage
@@ -276,12 +408,10 @@ func FromContext(ctx context.Context) Language {
 	return DefaultLanguage
 }
 
-// WithContext returns a new context with the specified language
 func WithContext(ctx context.Context, lang Language) context.Context {
 	return context.WithValue(ctx, langContextKey, lang)
 }
 
-// Middleware injects detected language into gin.Context and request.Context
 func Middleware(defaultLang ...Language) gin.HandlerFunc {
 	fallback := DefaultLanguage
 	if len(defaultLang) > 0 {
@@ -305,9 +435,6 @@ func Middleware(defaultLang ...Language) gin.HandlerFunc {
 	}
 }
 
-// T translates a message key for a given language.
-// If key is not found, it tries DefaultLanguage.
-// If still not found, it returns the key itself.
 func T(lang Language, key string, args ...any) string {
 	langDict, ok := messages[lang]
 	if !ok {
@@ -316,7 +443,6 @@ func T(lang Language, key string, args ...any) string {
 
 	msg, exists := langDict[key]
 	if !exists {
-		// Fallback to default language if different
 		if lang != DefaultLanguage {
 			if defaultDict, ok := messages[DefaultLanguage]; ok {
 				msg = defaultDict[key]
@@ -325,7 +451,6 @@ func T(lang Language, key string, args ...any) string {
 	}
 
 	if msg == "" {
-		// Key not registered, return key as-is
 		msg = key
 	}
 
@@ -335,12 +460,10 @@ func T(lang Language, key string, args ...any) string {
 	return msg
 }
 
-// TCtx translates using the language stored in context.Context
 func TCtx(ctx context.Context, key string, args ...any) string {
 	return T(FromContext(ctx), key, args...)
 }
 
-// RegisterMessages allows adding or overriding messages dynamically
 func RegisterMessages(lang Language, newMessages map[string]string) {
 	if _, ok := messages[lang]; !ok {
 		messages[lang] = make(map[string]string)

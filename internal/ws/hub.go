@@ -19,7 +19,6 @@ type BroadcastMessage struct {
 	Payload []byte
 }
 
-// Minimal Client representation used by Hub.
 type Client struct {
 	RoomId uuid.UUID
 	Send   chan []byte
