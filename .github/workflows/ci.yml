@@ -30,7 +30,14 @@ jobs:
 
       - name: Check formatting
         run: |
-          test -z "$(gofmt -l .)"
+          files=$(gofmt -l .)
+          if [ -n "$files" ]; then
+            echo "The following files are not formatted:"
+            echo "$files"
+            echo ""
+            echo "Run: gofmt -w ."
+            exit 1
+          fi
 
       - name: Download dependencies
         run: go mod download

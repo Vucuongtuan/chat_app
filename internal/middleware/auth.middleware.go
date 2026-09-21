@@ -107,4 +107,3 @@ func RequirePrimaryDevice() gin.HandlerFunc {
 		c.Next()
 	}
 }
-

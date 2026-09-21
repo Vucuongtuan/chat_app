@@ -8,12 +8,12 @@ import (
 )
 
 type Config struct {
-	DBHost     string
-	DBPort     string
-	DBUser     string
-	DBPassword string
-	DBName     string
-	DBParams   string
+	DBHost       string
+	DBPort       string
+	DBUser       string
+	DBPassword   string
+	DBName       string
+	DBParams     string
 	Port         string
 	JWTSecret    string
 	SMTPHost     string

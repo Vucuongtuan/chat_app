@@ -20,10 +20,10 @@ type DeviceSession struct {
 	IsPrimary bool `json:"is_primary" gorm:"type:boolean;not null;default:false"`
 	IsActive  bool `json:"is_active" gorm:"type:boolean;not null;default:true"`
 
-	RefreshToken string     `json:"-" gorm:"type:text"`
-	LastActiveAt time.Time  `json:"last_active_at" gorm:"autoUpdateTime"`
-	CreatedAt    time.Time  `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt    time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
+	RefreshToken string         `json:"-" gorm:"type:text"`
+	LastActiveAt time.Time      `json:"last_active_at" gorm:"autoUpdateTime"`
+	CreatedAt    time.Time      `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt    time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
 	DeletedAt    gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
 
 	Account *Account `json:"account,omitempty" gorm:"foreignKey:AccountId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
