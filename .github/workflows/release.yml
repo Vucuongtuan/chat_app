@@ -11,6 +11,7 @@ permissions:
 
 env:
   APP_NAME: gin-app
+  MAIN_PKG: ./cmd/server/main.go 
 
 jobs:
   release:
@@ -38,9 +39,9 @@ jobs:
             GOARCH=${target#*/}
             ext=""
             [ "$GOOS" = "windows" ] && ext=".exe"
-            CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH \
+                        CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH \
               go build -trimpath -ldflags "-s -w" \
-              -o "dist/${APP_NAME}-${GITHUB_REF_NAME}-${GOOS}-${GOARCH}${ext}" .
+              -o "dist/${APP_NAME}-${GITHUB_REF_NAME}-${GOOS}-${GOARCH}${ext}" "$MAIN_PKG"
           done
           cd dist && sha256sum * > checksums.txt
 
