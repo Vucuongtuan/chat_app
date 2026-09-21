@@ -11,6 +11,8 @@ import (
 	"chatapp/pkg/mailer"
 	"chatapp/pkg/storage"
 
+	"chatapp/pkg/eventbus"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -49,6 +51,22 @@ func main() {
 	authService := service.NewAuthService(authRepo, deviceRepo, mailService, cfg)
 	authHandler := handler.NewAuthHandler(authService)
 
+	// in-process event bus for async events (websocket, notifications)
+	bus := eventbus.New()
+
+	// Room, Message, Post
+	roomRepo := repository.NewRoomRepository(db)
+	messageRepo := repository.NewMessageRepository(db)
+	postRepo := repository.NewPostRepository(db)
+
+	roomService := service.NewRoomService(roomRepo, userRepo, bus)
+	messageService := service.NewMessageService(messageRepo, roomRepo, bus)
+	postService := service.NewPostService(postRepo, userRepo)
+
+	roomHandler := handler.NewRoomHandler(roomService)
+	messageHandler := handler.NewMessageHandler(messageService)
+	postHandler := handler.NewPostHandler(postService)
+
 	// Middleware
 	authMiddleware := middleware.Auth(cfg.JWTSecret)
 
@@ -57,9 +75,12 @@ func main() {
 
 	// Setup routes
 	handler.Setup(router, &handler.Handlers{
-		Auth:  authHandler,
-		Media: mediaHandler,
-		User:  userHandler,
+		Auth:    authHandler,
+		Media:   mediaHandler,
+		User:    userHandler,
+		Room:    roomHandler,
+		Message: messageHandler,
+		Post:    postHandler,
 	}, authMiddleware)
 
 	router.Run(":8080")

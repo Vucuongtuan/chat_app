@@ -41,32 +41,31 @@ func (r *messageRepository) Create(ctx context.Context, msg *model.Message, reci
 		}
 
 		now := time.Now()
+		statuses := make([]model.MessageStatus, 0, len(recipientIDs))
 		for _, recipientID := range recipientIDs {
 			if recipientID == msg.SenderId {
 				continue
 			}
-			status := model.MessageStatus{
+			statuses = append(statuses, model.MessageStatus{
 				MessageId: msg.ID,
 				UserId:    recipientID,
 				Status:    "sent",
 				CreatedAt: now,
 				UpdatedAt: now,
-			}
-			if err := tx.Create(&status).Error; err != nil {
+			})
+		}
+		if len(statuses) > 0 {
+			if err := tx.CreateInBatches(statuses, 100).Error; err != nil {
 				return err
 			}
 		}
 
-		if err := tx.Model(&model.Room{}).
+		return tx.Model(&model.Room{}).
 			Where("id = ?", msg.RoomId).
 			Updates(map[string]interface{}{
 				"last_message_id": msg.ID,
 				"updated_at":      now,
-			}).Error; err != nil {
-			return err
-		}
-
-		return nil
+			}).Error
 	})
 }
 
@@ -131,14 +130,12 @@ func (r *messageRepository) SoftDelete(ctx context.Context, id string) error {
 }
 
 func (r *messageRepository) AddReaction(ctx context.Context, reaction *model.MessageReaction) error {
-	// First check if reaction with same message, user, emoji already exists
 	var existing model.MessageReaction
 	err := r.db.WithContext(ctx).
 		Where("message_id = ? AND user_id = ? AND emoji = ?", reaction.MessageId, reaction.UserId, reaction.Emoji).
 		First(&existing).Error
 
 	if err == nil {
-		// Already exists
 		return nil
 	}
 

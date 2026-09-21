@@ -10,9 +10,12 @@ import (
 )
 
 type Handlers struct {
-	Media *MediaHandler
-	User  *UserHandler
-	Auth  *AuthHandler
+	Media   *MediaHandler
+	User    *UserHandler
+	Auth    *AuthHandler
+	Room    *RoomHandler
+	Message *MessageHandler
+	Post    *PostHandler
 }
 
 func Setup(router *gin.Engine, h *Handlers, authMiddleware ...gin.HandlerFunc) {
@@ -32,6 +35,18 @@ func Setup(router *gin.Engine, h *Handlers, authMiddleware ...gin.HandlerFunc) {
 
 		if h.User != nil {
 			h.User.RegisterRoutes(api, authMiddleware...)
+		}
+
+		if h.Room != nil {
+			h.Room.RegisterRoutes(api, authMiddleware...)
+		}
+
+		if h.Message != nil {
+			h.Message.RegisterRoutes(api, authMiddleware...)
+		}
+
+		if h.Post != nil {
+			h.Post.RegisterRoutes(api, authMiddleware...)
 		}
 	}
 }

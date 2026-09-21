@@ -13,17 +13,20 @@ import (
 	"chatapp/internal/dto"
 	"chatapp/internal/model"
 	"chatapp/internal/repository"
+	"chatapp/pkg/eventbus"
 )
 
 type MessageService struct {
 	messageRepo repository.MessageRepository
 	roomRepo    repository.RoomRepository
+	bus         *eventbus.Bus
 }
 
-func NewMessageService(messageRepo repository.MessageRepository, roomRepo repository.RoomRepository) *MessageService {
+func NewMessageService(messageRepo repository.MessageRepository, roomRepo repository.RoomRepository, bus *eventbus.Bus) *MessageService {
 	return &MessageService{
 		messageRepo: messageRepo,
 		roomRepo:    roomRepo,
+		bus:         bus,
 	}
 }
 
@@ -64,7 +67,6 @@ func (s *MessageService) SendMessage(ctx context.Context, senderIDStr string, re
 		if err != nil {
 			return nil, fmt.Errorf("reply_to_id không hợp lệ")
 		}
-		// verify reply to message exists in this room
 		replyMsg, err := s.messageRepo.FindByID(ctx, parsed.String())
 		if err != nil || replyMsg.RoomId != roomID {
 			return nil, fmt.Errorf("tin nhắn trả lời không tồn tại trong phòng này")

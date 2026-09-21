@@ -15,17 +15,20 @@ import (
 	"chatapp/internal/dto"
 	"chatapp/internal/model"
 	"chatapp/internal/repository"
+	"chatapp/pkg/eventbus"
 )
 
 type RoomService struct {
 	roomRepo repository.RoomRepository
 	userRepo repository.UserRepository
+	bus      *eventbus.Bus
 }
 
-func NewRoomService(roomRepo repository.RoomRepository, userRepo repository.UserRepository) *RoomService {
+func NewRoomService(roomRepo repository.RoomRepository, userRepo repository.UserRepository, bus *eventbus.Bus) *RoomService {
 	return &RoomService{
 		roomRepo: roomRepo,
 		userRepo: userRepo,
+		bus:      bus,
 	}
 }
 
@@ -95,6 +98,9 @@ func (s *RoomService) CreateRoom(ctx context.Context, creatorIDStr string, req d
 		if err := s.roomRepo.Create(ctx, room); err != nil {
 			return nil, err
 		}
+		if s.bus != nil {
+			s.bus.Publish(eventbus.Event{Type: eventbus.EventRoomCreated, Payload: room})
+		}
 		return room, nil
 	}
 
@@ -150,6 +156,10 @@ func (s *RoomService) CreateRoom(ctx context.Context, creatorIDStr string, req d
 
 	if err := s.roomRepo.Create(ctx, room); err != nil {
 		return nil, err
+	}
+
+	if s.bus != nil {
+		s.bus.Publish(eventbus.Event{Type: eventbus.EventRoomCreated, Payload: room})
 	}
 
 	return room, nil
@@ -296,6 +306,10 @@ func (s *RoomService) AddMember(ctx context.Context, currentUserID, roomID strin
 		return nil, err
 	}
 
+	if s.bus != nil {
+		s.bus.Publish(eventbus.Event{Type: eventbus.EventRoomMemberAdded, Payload: newMember})
+	}
+
 	return newMember, nil
 }
 
@@ -346,10 +360,24 @@ func (s *RoomService) LeaveRoom(ctx context.Context, userID, roomID string) erro
 			return fmt.Errorf("vui lòng chuyển quyền trưởng nhóm trước khi rời nhóm")
 		}
 		// Last member leaves -> delete room
-		return s.roomRepo.Delete(ctx, roomID)
+		if err := s.roomRepo.Delete(ctx, roomID); err != nil {
+			return err
+		}
+		if s.bus != nil {
+			s.bus.Publish(eventbus.Event{Type: eventbus.EventRoomMemberLeft, Payload: map[string]string{"room_id": roomID, "user_id": userID}})
+		}
+		return nil
 	}
 
-	return s.roomRepo.RemoveMember(ctx, roomID, userID)
+	if err := s.roomRepo.RemoveMember(ctx, roomID, userID); err != nil {
+		return err
+	}
+
+	if s.bus != nil {
+		s.bus.Publish(eventbus.Event{Type: eventbus.EventRoomMemberLeft, Payload: map[string]string{"room_id": roomID, "user_id": userID}})
+	}
+
+	return nil
 }
 
 func (s *RoomService) UpdateMember(ctx context.Context, currentUserID, roomID, targetUserID string, req dto.UpdateRoomMemberRequest) (*model.RoomMember, error) {

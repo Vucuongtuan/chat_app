@@ -1,72 +1,89 @@
 package ws
 
-import (
-	"sync"
-
-	"github.com/google/uuid"
-)
-
-type Hub struct {
-	rooms      map[uuid.UUID]map[*Client]bool // roomId -> set of clients
-	register   chan *Client
-	unregister chan *Client
-	broadcast  chan *BroadcastMessage
-	mu         sync.RWMutex
-}
-
-type BroadcastMessage struct {
-	RoomId  uuid.UUID
-	Payload []byte
-}
+import "github.com/google/uuid"
 
 type Client struct {
 	RoomId uuid.UUID
 	Send   chan []byte
 }
 
+type registerEvent struct{ client *Client }
+type unregisterEvent struct{ client *Client }
+type BroadcastMessage struct {
+	RoomId  uuid.UUID
+	Payload []byte
+}
+
+type Hub struct {
+	rooms  map[uuid.UUID]map[*Client]struct{}
+	events chan any
+	done   chan struct{}
+}
+
 func NewHub() *Hub {
 	return &Hub{
-		rooms:      make(map[uuid.UUID]map[*Client]bool),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-		broadcast:  make(chan *BroadcastMessage),
+		rooms:  make(map[uuid.UUID]map[*Client]struct{}),
+		events: make(chan any, 256),
+		done:   make(chan struct{}),
 	}
 }
 
 func (h *Hub) Run() {
 	for {
 		select {
-		case client := <-h.register:
-			h.mu.Lock()
-			if h.rooms[client.RoomId] == nil {
-				h.rooms[client.RoomId] = make(map[*Client]bool)
-			}
-			h.rooms[client.RoomId][client] = true
-			h.mu.Unlock()
+		case <-h.done:
+			return
+		case ev := <-h.events:
+			switch e := ev.(type) {
+			case registerEvent:
+				c := e.client
+				if h.rooms[c.RoomId] == nil {
+					h.rooms[c.RoomId] = make(map[*Client]struct{})
+				}
+				h.rooms[c.RoomId][c] = struct{}{}
 
-		case client := <-h.unregister:
-			h.mu.Lock()
-			if clients, ok := h.rooms[client.RoomId]; ok {
-				delete(clients, client)
-				close(client.Send)
-			}
-			h.mu.Unlock()
+			case unregisterEvent:
+				h.remove(e.client)
 
-		case msg := <-h.broadcast:
-			h.mu.RLock()
-			for client := range h.rooms[msg.RoomId] {
-				select {
-				case client.Send <- msg.Payload:
-				default:
-					close(client.Send)
-					delete(h.rooms[msg.RoomId], client)
+			case *BroadcastMessage:
+				for c := range h.rooms[e.RoomId] {
+					select {
+					case c.Send <- e.Payload:
+					default:
+						h.remove(c) // slow client: xóa + close ngay
+					}
 				}
 			}
-			h.mu.RUnlock()
 		}
 	}
 }
 
+func (h *Hub) remove(c *Client) {
+	clients, ok := h.rooms[c.RoomId]
+	if !ok {
+		return
+	}
+	if _, exists := clients[c]; !exists {
+		return
+	}
+	delete(clients, c)
+	close(c.Send)
+	if len(clients) == 0 {
+		delete(h.rooms, c.RoomId) // dọn room rỗng
+	}
+}
+
+func (h *Hub) Stop() { close(h.done) }
+
+func (h *Hub) send(ev any) {
+	select {
+	case h.events <- ev:
+	case <-h.done:
+	}
+}
+
+func (h *Hub) Register(c *Client)   { h.send(registerEvent{c}) }
+func (h *Hub) Unregister(c *Client) { h.send(unregisterEvent{c}) }
 func (h *Hub) BroadcastToRoom(roomId uuid.UUID, payload []byte) {
-	h.broadcast <- &BroadcastMessage{RoomId: roomId, Payload: payload}
+	h.send(&BroadcastMessage{RoomId: roomId, Payload: payload})
 }
