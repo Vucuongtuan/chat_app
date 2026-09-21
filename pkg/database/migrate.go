@@ -12,6 +12,8 @@ func Migrate(db *gorm.DB) {
 	err := db.AutoMigrate(
 		&model.Account{},
 		&model.User{},
+		&model.DeviceSession{},
+		&model.VerificationCode{},
 		&model.Media{},
 		&model.Post{},
 		&model.PostLike{},
