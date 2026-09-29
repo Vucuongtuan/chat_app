@@ -32,7 +32,12 @@ func (h *AuthHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware ...
 		auth.POST("/reset-password", h.ResetPassword)
 		auth.POST("/refresh-token", h.RefreshToken)
 
-		// Protected routes
+		auth.POST("/qr/challenge", h.QRChallenge)
+		auth.GET("/qr/status/:token", h.QRStatus)
+
+		auth.POST("/secondary/request-otp", h.SecondaryRequestOTP)
+		auth.POST("/secondary/verify-otp", h.SecondaryVerifyOTP)
+
 		if len(authMiddleware) > 0 {
 			protected := auth.Group("")
 			protected.Use(authMiddleware...)
@@ -40,16 +45,16 @@ func (h *AuthHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware ...
 				protected.POST("/logout", h.Logout)
 				protected.GET("/devices", h.GetDevices)
 
-				// Chỉ thiết bị chính (Primary Device) mới có quyền thao tác các routes sau
 				primaryOnly := protected.Group("")
 				primaryOnly.Use(middleware.RequirePrimaryDevice())
 				{
-					// Quản lý thiết bị từ xa
 					primaryOnly.DELETE("/devices/:id", h.LogoutDevice)
 					primaryOnly.POST("/devices/logout-others", h.LogoutAllOtherDevices)
 					primaryOnly.POST("/devices/:id/set-primary", h.TransferPrimary)
 
-					// Bật / tắt 2FA qua email
+					primaryOnly.POST("/qr/approve", h.QRApprove)
+					primaryOnly.POST("/qr/reject", h.QRReject)
+
 					primaryOnly.POST("/2fa/enable-request", h.RequestEnable2FA)
 					primaryOnly.POST("/2fa/enable-confirm", h.ConfirmEnable2FA)
 					primaryOnly.POST("/2fa/disable", h.Disable2FA)
@@ -309,4 +314,110 @@ func (h *AuthHandler) Disable2FA(c *gin.Context) {
 	}
 
 	response.Success(c, http.StatusOK, gin.H{"two_factor_enabled": false}, i18n.Msg2FADisabled)
+}
+
+// ======================== QR Login ========================
+
+// QRChallenge tạo QR token (secondary device gọi, không cần auth)
+func (h *AuthHandler) QRChallenge(c *gin.Context) {
+	var req dto.QRChallengeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, i18n.ErrValidation, err.Error())
+		return
+	}
+
+	res, err := h.authService.QRChallenge(c.Request.Context(), req, c.ClientIP(), c.Request.UserAgent())
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, i18n.ErrBadRequest, err.Error())
+		return
+	}
+
+	response.Success(c, http.StatusCreated, res, i18n.MsgSuccess)
+}
+
+// QRStatus poll trạng thái QR token (secondary device gọi, không cần auth)
+func (h *AuthHandler) QRStatus(c *gin.Context) {
+	token := c.Param("token")
+	if token == "" {
+		response.Error(c, http.StatusBadRequest, i18n.ErrValidation, "token không được để trống")
+		return
+	}
+
+	res, err := h.authService.QRStatus(c.Request.Context(), token)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, i18n.ErrBadRequest, err.Error())
+		return
+	}
+
+	response.Success(c, http.StatusOK, res, i18n.MsgSuccess)
+}
+
+// QRApprove primary phone approve QR login (yêu cầu auth + isPrimary)
+func (h *AuthHandler) QRApprove(c *gin.Context) {
+	accountID := middleware.GetAccountID(c)
+
+	var req dto.QRApproveRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, i18n.ErrValidation, err.Error())
+		return
+	}
+
+	if err := h.authService.QRApprove(c.Request.Context(), accountID, req.Token); err != nil {
+		response.Error(c, http.StatusBadRequest, i18n.ErrBadRequest, err.Error())
+		return
+	}
+
+	response.Success(c, http.StatusOK, gin.H{"status": "approved"}, i18n.MsgSuccess)
+}
+
+// QRReject primary phone reject QR login (yêu cầu auth + isPrimary)
+func (h *AuthHandler) QRReject(c *gin.Context) {
+	var req dto.QRApproveRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, i18n.ErrValidation, err.Error())
+		return
+	}
+
+	if err := h.authService.QRReject(c.Request.Context(), req.Token); err != nil {
+		response.Error(c, http.StatusBadRequest, i18n.ErrBadRequest, err.Error())
+		return
+	}
+
+	response.Success(c, http.StatusOK, gin.H{"status": "rejected"}, i18n.MsgSuccess)
+}
+
+// ======================== Secondary OTP Login ========================
+
+// SecondaryRequestOTP secondary device yêu cầu OTP (không cần auth)
+func (h *AuthHandler) SecondaryRequestOTP(c *gin.Context) {
+	var req dto.SecondaryOTPRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, i18n.ErrValidation, err.Error())
+		return
+	}
+
+	res, err := h.authService.SecondaryRequestOTP(c.Request.Context(), req, c.ClientIP(), c.Request.UserAgent())
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, i18n.ErrBadRequest, err.Error())
+		return
+	}
+
+	response.Success(c, http.StatusCreated, res, i18n.MsgSuccess)
+}
+
+// SecondaryVerifyOTP secondary device xác thực OTP để đăng nhập (không cần auth)
+func (h *AuthHandler) SecondaryVerifyOTP(c *gin.Context) {
+	var req dto.SecondaryOTPVerifyRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, i18n.ErrValidation, err.Error())
+		return
+	}
+
+	res, err := h.authService.SecondaryVerifyOTP(c.Request.Context(), req, c.ClientIP(), c.Request.UserAgent())
+	if err != nil {
+		response.Error(c, http.StatusUnauthorized, i18n.ErrInvalidOTP, err.Error())
+		return
+	}
+
+	response.Success(c, http.StatusOK, res, i18n.MsgLoginSuccess)
 }

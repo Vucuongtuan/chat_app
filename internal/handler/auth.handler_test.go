@@ -200,6 +200,36 @@ func (m *mockDeviceRepo) CountActivePrimarySessions(ctx context.Context, account
 	return count, nil
 }
 
+func (m *mockDeviceRepo) CountActivePhoneSessions(ctx context.Context, accountID uuid.UUID) (int64, error) {
+	var count int64
+	for _, s := range m.sessions {
+		if s.AccountId == accountID && s.Platform == model.PlatformPhone && s.IsActive {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (m *mockDeviceRepo) CountActiveSecondarySessions(ctx context.Context, accountID uuid.UUID) (int64, error) {
+	var count int64
+	for _, s := range m.sessions {
+		if s.AccountId == accountID && s.Platform != model.PlatformPhone && s.IsActive {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (m *mockDeviceRepo) RevokePhoneSessions(ctx context.Context, accountID uuid.UUID) error {
+	for _, s := range m.sessions {
+		if s.AccountId == accountID && s.Platform == model.PlatformPhone && s.IsActive {
+			s.IsActive = false
+			s.IsPrimary = false
+		}
+	}
+	return nil
+}
+
 func (m *mockDeviceRepo) RevokeSession(ctx context.Context, sessionID uuid.UUID) error {
 	if s, ok := m.sessions[sessionID.String()]; ok {
 		s.IsActive = false
@@ -228,6 +258,34 @@ func (m *mockDeviceRepo) SetPrimarySession(ctx context.Context, accountID uuid.U
 		s.IsActive = true
 	}
 	return nil
+}
+
+func (m *mockDeviceRepo) CreateQRSession(ctx context.Context, q *model.QRLoginSession) error {
+	return nil
+}
+
+func (m *mockDeviceRepo) FindQRSession(ctx context.Context, token string) (*model.QRLoginSession, error) {
+	return nil, gorm.ErrRecordNotFound
+}
+
+func (m *mockDeviceRepo) ApproveQRSession(ctx context.Context, token string, accountID uuid.UUID, sessionID uuid.UUID) error {
+	return gorm.ErrRecordNotFound
+}
+
+func (m *mockDeviceRepo) RejectQRSession(ctx context.Context, token string) error {
+	return gorm.ErrRecordNotFound
+}
+
+func (m *mockDeviceRepo) CreateSecondaryOTPSession(ctx context.Context, s *model.SecondaryOTPSession) error {
+	return nil
+}
+
+func (m *mockDeviceRepo) FindSecondaryOTPSession(ctx context.Context, id uuid.UUID) (*model.SecondaryOTPSession, error) {
+	return nil, gorm.ErrRecordNotFound
+}
+
+func (m *mockDeviceRepo) MarkSecondaryOTPUsed(ctx context.Context, id uuid.UUID) error {
+	return gorm.ErrRecordNotFound
 }
 
 // Mock Mailer

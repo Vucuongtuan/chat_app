@@ -3,24 +3,28 @@ package config
 import (
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	DBHost       string
-	DBPort       string
-	DBUser       string
-	DBPassword   string
-	DBName       string
-	DBParams     string
-	Port         string
-	JWTSecret    string
-	SMTPHost     string
-	SMTPPort     string
-	SMTPUser     string
-	SMTPPassword string
-	SMTPFrom     string
+	DBHost        string
+	DBPort        string
+	DBUser        string
+	DBPassword    string
+	DBName        string
+	DBParams      string
+	Port          string
+	JWTSecret     string
+	SMTPHost      string
+	SMTPPort      string
+	SMTPUser      string
+	SMTPPassword  string
+	SMTPFrom      string
+	RedisAddr     string
+	RedisPassword string
+	RedisDB       int
 }
 
 func Load() *Config {
@@ -30,19 +34,22 @@ func Load() *Config {
 	}
 
 	return &Config{
-		DBHost:       getEnv("DB_HOST", "127.0.0.1"),
-		DBPort:       getEnv("DB_PORT", "3306"),
-		DBUser:       getEnv("DB_USER", "root"),
-		DBPassword:   getEnv("DB_PASSWORD", ""),
-		DBName:       getEnv("DB_NAME", "chatapp"),
-		DBParams:     getEnv("DB_PARAMS", "charset=utf8mb4&parseTime=True&loc=Local"),
-		Port:         getEnv("PORT", "8080"),
-		JWTSecret:    getEnv("JWT_SECRET", "supersecret"),
-		SMTPHost:     getEnv("SMTP_HOST", ""),
-		SMTPPort:     getEnv("SMTP_PORT", "587"),
-		SMTPUser:     getEnv("SMTP_USER", ""),
-		SMTPPassword: getEnv("SMTP_PASSWORD", ""),
-		SMTPFrom:     getEnv("SMTP_FROM", "no-reply@chatapp.com"),
+		DBHost:        getEnv("DB_HOST", "127.0.0.1"),
+		DBPort:        getEnv("DB_PORT", "3306"),
+		DBUser:        getEnv("DB_USER", "root"),
+		DBPassword:    getEnv("DB_PASSWORD", ""),
+		DBName:        getEnv("DB_NAME", "chatapp"),
+		DBParams:      getEnv("DB_PARAMS", "charset=utf8mb4&parseTime=True&loc=Local"),
+		Port:          getEnv("PORT", "8080"),
+		JWTSecret:     getEnv("JWT_SECRET", "supersecret"),
+		SMTPHost:      getEnv("SMTP_HOST", ""),
+		SMTPPort:      getEnv("SMTP_PORT", "587"),
+		SMTPUser:      getEnv("SMTP_USER", ""),
+		SMTPPassword:  getEnv("SMTP_PASSWORD", ""),
+		SMTPFrom:      getEnv("SMTP_FROM", "no-reply@chatapp.com"),
+		RedisAddr:     getEnv("REDIS_ADDR", "127.0.0.1:6379"),
+		RedisPassword: getEnv("REDIS_PASSWORD", ""),
+		RedisDB:       getEnvInt("REDIS_DB", 0),
 	}
 }
 
@@ -51,4 +58,12 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func getEnvInt(key string, fallback int) int {
+	v, err := strconv.Atoi(os.Getenv(key))
+	if err != nil || v < 0 {
+		return fallback
+	}
+	return v
 }

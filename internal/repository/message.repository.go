@@ -12,11 +12,15 @@ import (
 )
 
 type MessageRepository interface {
-	Create(ctx context.Context, msg *model.Message, recipientIDs []uuid.UUID) error
+	Create(ctx context.Context, msg *model.Message, recipientIDs []uuid.UUID, targetIDs []uuid.UUID) error
 	FindByID(ctx context.Context, id string) (*model.Message, error)
-	FindByRoomID(ctx context.Context, roomID string, limit, offset int, beforeID *string) ([]model.Message, int64, error)
+	// FindByRoomID trả về danh sách tin nhắn trong phòng, lọc ra những tin đã bị userID ẩn hoặc tin targeted không thuộc về userID.
+	FindByRoomID(ctx context.Context, roomID string, userID string, limit, offset int, beforeID *string) ([]model.Message, int64, error)
 	Update(ctx context.Context, msg *model.Message) error
 	SoftDelete(ctx context.Context, id string) error
+
+	// HideForUser ẩn tin nhắn chỉ phía userID (xóa phía mình).
+	HideForUser(ctx context.Context, messageID, userID string) error
 
 	AddReaction(ctx context.Context, reaction *model.MessageReaction) error
 	RemoveReaction(ctx context.Context, messageID, userID, emoji string) error
@@ -34,13 +38,33 @@ func NewMessageRepository(db *gorm.DB) MessageRepository {
 	return &messageRepository{db: db}
 }
 
-func (r *messageRepository) Create(ctx context.Context, msg *model.Message, recipientIDs []uuid.UUID) error {
+func (r *messageRepository) Create(ctx context.Context, msg *model.Message, recipientIDs []uuid.UUID, targetIDs []uuid.UUID) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if len(targetIDs) > 0 {
+			msg.IsTargeted = true
+		}
+
 		if err := tx.Create(msg).Error; err != nil {
 			return err
 		}
 
 		now := time.Now()
+
+		// Lưu danh sách người được chỉ định xem tin nếu là targeted
+		if len(targetIDs) > 0 {
+			targets := make([]model.MessageTarget, len(targetIDs))
+			for i, tid := range targetIDs {
+				targets[i] = model.MessageTarget{
+					MessageId: msg.ID,
+					UserId:    tid,
+					CreatedAt: now,
+				}
+			}
+			if err := tx.Create(&targets).Error; err != nil {
+				return err
+			}
+		}
+
 		statuses := make([]model.MessageStatus, 0, len(recipientIDs))
 		for _, recipientID := range recipientIDs {
 			if recipientID == msg.SenderId {
@@ -73,6 +97,7 @@ func (r *messageRepository) FindByID(ctx context.Context, id string) (*model.Mes
 	var msg model.Message
 	err := r.db.WithContext(ctx).
 		Preload("Reactions").
+		Preload("Targets").
 		First(&msg, "id = ?", id).Error
 	if err != nil {
 		return nil, err
@@ -80,13 +105,24 @@ func (r *messageRepository) FindByID(ctx context.Context, id string) (*model.Mes
 	return &msg, nil
 }
 
-func (r *messageRepository) FindByRoomID(ctx context.Context, roomID string, limit, offset int, beforeID *string) ([]model.Message, int64, error) {
+func (r *messageRepository) FindByRoomID(ctx context.Context, roomID string, userID string, limit, offset int, beforeID *string) ([]model.Message, int64, error) {
 	var messages []model.Message
 	var total int64
 
+	// Lọc tin nhắn chưa bị userID ẩn
 	query := r.db.WithContext(ctx).
 		Model(&model.Message{}).
-		Where("room_id = ?", roomID)
+		Where("room_id = ?", roomID).
+		Where("id NOT IN (?)",
+			r.db.Model(&model.MessageHidden{}).
+				Select("message_id").
+				Where("user_id = ?", userID),
+		).
+		Where(
+			"is_targeted = false OR sender_id = ? OR id IN (?)",
+			userID,
+			r.db.Model(&model.MessageTarget{}).Select("message_id").Where("user_id = ?", userID),
+		)
 
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
@@ -105,12 +141,34 @@ func (r *messageRepository) FindByRoomID(ctx context.Context, roomID string, lim
 
 	err := query.
 		Preload("Reactions").
+		Preload("Targets").
 		Order("created_at DESC").
 		Limit(limit).
 		Offset(offset).
 		Find(&messages).Error
 
 	return messages, total, err
+}
+
+func (r *messageRepository) HideForUser(ctx context.Context, messageID, userID string) error {
+	msgUUID, err := uuid.Parse(messageID)
+	if err != nil {
+		return err
+	}
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		return err
+	}
+
+	hidden := model.MessageHidden{
+		MessageId: msgUUID,
+		UserId:    userUUID,
+	}
+
+	// INSERT IGNORE: nếu đã tồn tại thì bỏ qua, không báo lỗi
+	return r.db.WithContext(ctx).
+		Where(model.MessageHidden{MessageId: msgUUID, UserId: userUUID}).
+		FirstOrCreate(&hidden).Error
 }
 
 func (r *messageRepository) Update(ctx context.Context, msg *model.Message) error {

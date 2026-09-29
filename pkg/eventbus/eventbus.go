@@ -15,6 +15,25 @@ const (
 	EventRoomMemberLeft  EventType = "room.member_left"
 	EventUserOnline      EventType = "user.online"
 	EventUserOffline     EventType = "user.offline"
+
+	// Device events
+	// EventDevicePhoneReplaced: phone cũ bị đăng xuất vì phone mới login
+	EventDevicePhoneReplaced EventType = "device.phone_replaced"
+	// EventDeviceSecondaryOTPRequested: secondary device xin OTP, primary phone cần hiển thị
+	EventDeviceSecondaryOTPRequested EventType = "device.secondary_otp_requested"
+
+	// Room events
+	EventMessagePinned       EventType = "room.message_pinned"
+	EventMessageUnpinned     EventType = "room.message_unpinned"
+	EventPollCreated         EventType = "poll.created"
+	EventPollVoted           EventType = "poll.voted"
+	EventScheduleCreated     EventType = "schedule.created"
+	EventScheduleDeleted     EventType = "schedule.deleted"
+
+	// Activity events (task, attendance, checklist, billing)
+	EventActivityCreated            EventType = "activity.created"
+	EventActivityUpdated            EventType = "activity.updated"
+	EventActivityParticipantUpdated EventType = "activity.participant_updated"
 )
 
 type Event struct {

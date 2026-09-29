@@ -14,8 +14,10 @@ type Handlers struct {
 	User    *UserHandler
 	Auth    *AuthHandler
 	Room    *RoomHandler
-	Message *MessageHandler
-	Post    *PostHandler
+	Message   *MessageHandler
+	Post         *PostHandler
+	RoomEvent    *RoomEventHandler
+	RoomActivity *RoomActivityHandler
 }
 
 func Setup(router *gin.Engine, h *Handlers, authMiddleware ...gin.HandlerFunc) {
@@ -47,6 +49,14 @@ func Setup(router *gin.Engine, h *Handlers, authMiddleware ...gin.HandlerFunc) {
 
 		if h.Post != nil {
 			h.Post.RegisterRoutes(api, authMiddleware...)
+		}
+
+		if h.RoomEvent != nil {
+			h.RoomEvent.RegisterRoutes(api, authMiddleware...)
+		}
+
+		if h.RoomActivity != nil {
+			h.RoomActivity.RegisterRoutes(api, authMiddleware...)
 		}
 	}
 }
