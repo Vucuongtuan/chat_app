@@ -92,6 +92,12 @@ docker-compose down
 
 (To be documented)
 
+## Realtime presence
+
+Thiết kế và flow triển khai trạng thái online/offline nằm tại [docs/PRESENCE.md](docs/PRESENCE.md).
+
+Hướng dẫn scale ngang WebSocket, Redis Pub/Sub và luồng message realtime nằm tại [docs/REALTIME_SCALING.md](docs/REALTIME_SCALING.md).
+
 ## License
 
 MIT

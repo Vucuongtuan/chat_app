@@ -13,6 +13,8 @@ func Migrate(db *gorm.DB) {
 		&model.Account{},
 		&model.User{},
 		&model.DeviceSession{},
+		&model.QRLoginSession{},
+		&model.SecondaryOTPSession{},
 		&model.VerificationCode{},
 		&model.Media{},
 		&model.Post{},
@@ -23,6 +25,15 @@ func Migrate(db *gorm.DB) {
 		&model.Message{},
 		&model.MessageStatus{},
 		&model.MessageReaction{},
+		&model.MessageHidden{},
+		&model.MessageTarget{},
+		&model.PinnedMessage{},
+		&model.Poll{},
+		&model.PollOption{},
+		&model.PollVote{},
+		&model.RoomSchedule{},
+		&model.RoomActivity{},
+		&model.ActivityParticipant{},
 	)
 	if err != nil {
 		log.Fatalf("Migration thất bại: %v", err)

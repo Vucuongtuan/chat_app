@@ -13,8 +13,8 @@ type Message struct {
 	RoomId   uuid.UUID `json:"room_id" gorm:"type:char(36);not null;index"`
 	SenderId uuid.UUID `json:"sender_id" gorm:"type:char(36);not null;index"`
 
-	Type    string `json:"type" gorm:"type:varchar(10);not null;default:'text'"` // text, image, video, file, voice, system
-	Content string `json:"content" gorm:"type:text"`                             // text hoặc caption
+	Type    string `json:"type" gorm:"type:varchar(20);not null;default:'text'"` // text, image, video, file, voice, system, poll, schedule, location, contact
+	Content string `json:"content" gorm:"type:text"`                             // text hoặc JSON payload (location/contact/etc)
 
 	ReplyToId       *uuid.UUID `json:"reply_to_id,omitempty" gorm:"type:char(36)"`
 	ForwardedFromId *uuid.UUID `json:"forwarded_from_id,omitempty" gorm:"type:char(36)"` // trỏ tới message gốc nếu là forward
@@ -30,6 +30,9 @@ type Message struct {
 
 	Reactions []MessageReaction `json:"reactions,omitempty" gorm:"foreignKey:MessageId"`
 	Statuses  []MessageStatus   `json:"-" gorm:"foreignKey:MessageId"` // không trả full list ra JSON, tính toán riêng
+
+	IsTargeted bool            `json:"is_targeted" gorm:"default:false;index"` // Chỉ hiển thị với các user được chỉ định
+	Targets    []MessageTarget `json:"targets,omitempty" gorm:"foreignKey:MessageId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
 func (m *Message) BeforeCreate(tx *gorm.DB) (err error) {
@@ -65,7 +68,7 @@ type MessageReaction struct {
 
 	MessageId uuid.UUID `json:"message_id" gorm:"type:char(36);not null;index:idx_msg_user_reaction,unique"`
 	UserId    uuid.UUID `json:"user_id" gorm:"type:char(36);not null;index:idx_msg_user_reaction,unique"`
-	Emoji     string    `json:"emoji" gorm:"type:varchar(10);not null"` // "❤️", "😂", "👍"...
+	Emoji     string    `json:"emoji" gorm:"type:varchar(10);not null"`
 
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
@@ -76,4 +79,19 @@ func (r *MessageReaction) BeforeCreate(tx *gorm.DB) (err error) {
 		r.ID = uuid.New()
 	}
 	return nil
+}
+
+type MessageHidden struct {
+	MessageId uuid.UUID `json:"message_id" gorm:"type:char(36);not null;primaryKey"`
+	UserId    uuid.UUID `json:"user_id" gorm:"type:char(36);not null;primaryKey"`
+
+	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
+}
+
+// MessageTarget lưu danh sách các user được phép xem tin nhắn (nếu tin nhắn có IsTargeted = true)
+type MessageTarget struct {
+	MessageId uuid.UUID `json:"message_id" gorm:"type:char(36);not null;primaryKey;index"`
+	UserId    uuid.UUID `json:"user_id" gorm:"type:char(36);not null;primaryKey;index"`
+
+	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 }

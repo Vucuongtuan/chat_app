@@ -56,8 +56,17 @@ func (s *MessageService) SendMessage(ctx context.Context, senderIDStr string, re
 		msgType = "text"
 	}
 
+	validTypes := map[string]bool{
+		"text": true, "image": true, "video": true, "file": true,
+		"voice": true, "system": true, "poll": true, "schedule": true,
+		"location": true, "contact": true, "activity": true,
+	}
+	if !validTypes[msgType] {
+		return nil, fmt.Errorf("loại tin nhắn '%s' không hợp lệ", msgType)
+	}
+
 	content := strings.TrimSpace(req.Content)
-	if msgType == "text" && content == "" {
+	if content == "" && (msgType == "text" || msgType == "location" || msgType == "contact") {
 		return nil, fmt.Errorf("nội dung tin nhắn không được để trống")
 	}
 
@@ -83,6 +92,15 @@ func (s *MessageService) SendMessage(ctx context.Context, senderIDStr string, re
 		forwardUUID = &parsed
 	}
 
+	// Parse danh sách người được chỉ định xem tin (targeted users) nếu có
+	var targetUUIDs []uuid.UUID
+	for _, tidStr := range req.TargetUserIDs {
+		tidStr = strings.TrimSpace(tidStr)
+		if tid, err := uuid.Parse(tidStr); err == nil && tid != senderID {
+			targetUUIDs = append(targetUUIDs, tid)
+		}
+	}
+
 	// Get all room members to create status
 	members, err := s.roomRepo.FindMembers(ctx, roomIDStr)
 	if err != nil {
@@ -91,7 +109,21 @@ func (s *MessageService) SendMessage(ctx context.Context, senderIDStr string, re
 	var recipientIDs []uuid.UUID
 	for _, m := range members {
 		if m.UserId != senderID {
-			recipientIDs = append(recipientIDs, m.UserId)
+			// Nếu là targeted message thì chỉ tạo status cho các target user
+			if len(targetUUIDs) > 0 {
+				isTarget := false
+				for _, tid := range targetUUIDs {
+					if tid == m.UserId {
+						isTarget = true
+						break
+					}
+				}
+				if isTarget {
+					recipientIDs = append(recipientIDs, m.UserId)
+				}
+			} else {
+				recipientIDs = append(recipientIDs, m.UserId)
+			}
 		}
 	}
 
@@ -104,11 +136,12 @@ func (s *MessageService) SendMessage(ctx context.Context, senderIDStr string, re
 		Content:         content,
 		ReplyToId:       replyToUUID,
 		ForwardedFromId: forwardUUID,
+		IsTargeted:      len(targetUUIDs) > 0,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
 
-	if err := s.messageRepo.Create(ctx, msg, recipientIDs); err != nil {
+	if err := s.messageRepo.Create(ctx, msg, recipientIDs, targetUUIDs); err != nil {
 		return nil, err
 	}
 
@@ -125,6 +158,20 @@ func (s *MessageService) GetMessage(ctx context.Context, userID, messageID strin
 	_, err = s.roomRepo.FindMember(ctx, msg.RoomId.String(), userID)
 	if err != nil {
 		return nil, fmt.Errorf("bạn không phải thành viên của phòng chứa tin nhắn này")
+	}
+
+	// Nếu là tin nhắn định danh (targeted), kiểm tra xem user có phải người gửi hoặc nằm trong targets không
+	if msg.IsTargeted && msg.SenderId.String() != userID {
+		isAllowed := false
+		for _, t := range msg.Targets {
+			if t.UserId.String() == userID {
+				isAllowed = true
+				break
+			}
+		}
+		if !isAllowed {
+			return nil, fmt.Errorf("bạn không có quyền xem tin nhắn này")
+		}
 	}
 
 	return msg, nil
@@ -145,7 +192,7 @@ func (s *MessageService) ListMessages(ctx context.Context, userID, roomID string
 	}
 	offset := (page - 1) * perPage
 
-	return s.messageRepo.FindByRoomID(ctx, roomID, perPage, offset, beforeID)
+	return s.messageRepo.FindByRoomID(ctx, roomID, userID, perPage, offset, beforeID)
 }
 
 func (s *MessageService) EditMessage(ctx context.Context, userID, messageID string, req dto.EditMessageRequest) (*model.Message, error) {
@@ -180,22 +227,41 @@ func (s *MessageService) EditMessage(ctx context.Context, userID, messageID stri
 	return msg, nil
 }
 
-func (s *MessageService) DeleteMessage(ctx context.Context, userID, messageID string) error {
+// DeleteMessage xóa tin nhắn theo scope:
+//   - "me"       : chỉ ẩn phía người gọi, người khác vẫn thấy bình thường
+//   - "everyone" : xóa cho tất cả mọi người (chỉ người gửi được làm)
+func (s *MessageService) DeleteMessage(ctx context.Context, userID, messageID string, req dto.DeleteMessageRequest) error {
 	msg, err := s.messageRepo.FindByID(ctx, messageID)
 	if err != nil {
 		return err
 	}
 
-	if msg.SenderId.String() != userID {
-		// If not sender, check if user is room owner/admin
-		member, err := s.roomRepo.FindMember(ctx, msg.RoomId.String(), userID)
-		if err != nil || (member.Role != "owner" && member.Role != "admin") {
-			return fmt.Errorf("bạn không có quyền xóa tin nhắn này")
-		}
+	// Verify user is room member
+	_, err = s.roomRepo.FindMember(ctx, msg.RoomId.String(), userID)
+	if err != nil {
+		return fmt.Errorf("bạn không phải thành viên của phòng chứa tin nhắn này")
 	}
 
-	return s.messageRepo.SoftDelete(ctx, messageID)
+	switch req.Scope {
+	case "me":
+		// Ẩn phía mình — bất kỳ thành viên phòng nào cũng có thể làm
+		return s.messageRepo.HideForUser(ctx, messageID, userID)
+
+	case "everyone":
+		// Xóa cho tất cả — chỉ người gửi hoặc admin/owner mới được làm
+		if msg.SenderId.String() != userID {
+			member, err := s.roomRepo.FindMember(ctx, msg.RoomId.String(), userID)
+			if err != nil || (member.Role != "owner" && member.Role != "admin") {
+				return fmt.Errorf("chỉ người gửi mới có thể xóa tin nhắn cho tất cả mọi người")
+			}
+		}
+		return s.messageRepo.SoftDelete(ctx, messageID)
+
+	default:
+		return fmt.Errorf("scope không hợp lệ, phải là 'me' hoặc 'everyone'")
+	}
 }
+
 
 func (s *MessageService) AddReaction(ctx context.Context, userID, messageID string, req dto.AddReactionRequest) (*model.MessageReaction, error) {
 	msg, err := s.messageRepo.FindByID(ctx, messageID)

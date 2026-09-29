@@ -1,15 +1,20 @@
 package dto
 
 type SendMessageRequest struct {
-	RoomID          string  `json:"room_id" binding:"required"`
-	Type            string  `json:"type,omitempty"` // default "text"
-	Content         string  `json:"content"`
-	ReplyToID       *string `json:"reply_to_id,omitempty"`
-	ForwardedFromID *string `json:"forwarded_from_id,omitempty"`
+	RoomID          string   `json:"room_id" binding:"required"`
+	Type            string   `json:"type,omitempty"` // default "text"
+	Content         string   `json:"content"`
+	ReplyToID       *string  `json:"reply_to_id,omitempty"`
+	ForwardedFromID *string  `json:"forwarded_from_id,omitempty"`
+	TargetUserIDs   []string `json:"target_user_ids,omitempty"` // Nếu có, chỉ những user này và người gửi mới xem được trong room
 }
 
 type EditMessageRequest struct {
 	Content string `json:"content" binding:"required"`
+}
+
+type DeleteMessageRequest struct {
+	Scope string `json:"scope" binding:"required,oneof=me everyone"`
 }
 
 type AddReactionRequest struct {
@@ -50,5 +55,7 @@ type MessageResponse struct {
 	DeletedAt       *string                   `json:"deleted_at,omitempty"`
 	CreatedAt       string                    `json:"created_at"`
 	UpdatedAt       string                    `json:"updated_at"`
+	IsTargeted      bool                      `json:"is_targeted"`
+	TargetUserIDs   []string                  `json:"target_user_ids,omitempty"`
 	Reactions       []MessageReactionResponse `json:"reactions,omitempty"`
 }

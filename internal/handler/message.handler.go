@@ -128,7 +128,13 @@ func (h *MessageHandler) DeleteMessage(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	messageID := c.Param("id")
 
-	if err := h.service.DeleteMessage(c.Request.Context(), userID, messageID); err != nil {
+	var req dto.DeleteMessageRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, i18n.ErrValidation, err.Error())
+		return
+	}
+
+	if err := h.service.DeleteMessage(c.Request.Context(), userID, messageID, req); err != nil {
 		response.Error(c, http.StatusBadRequest, i18n.ErrBadRequest, err.Error())
 		return
 	}
@@ -196,9 +202,13 @@ func toMessageResponse(m *model.Message) dto.MessageResponse {
 		Type:      m.Type,
 		Content:   m.Content,
 		IsEdited:  m.IsEdited,
-		IsDeleted: m.IsDeleted,
-		CreatedAt: m.CreatedAt.Format(time.RFC3339),
-		UpdatedAt: m.UpdatedAt.Format(time.RFC3339),
+		IsDeleted:  m.IsDeleted,
+		CreatedAt:  m.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:  m.UpdatedAt.Format(time.RFC3339),
+		IsTargeted: m.IsTargeted,
+	}
+	for _, t := range m.Targets {
+		res.TargetUserIDs = append(res.TargetUserIDs, t.UserId.String())
 	}
 	if m.ReplyToId != nil {
 		s := m.ReplyToId.String()
